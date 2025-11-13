@@ -3,3 +3,11 @@ django-cors-headers==4.0.0
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.3.1
 firebase-admin==6.1.0
+
+# Additional packages for deployment
+gunicorn
+psycopg2-binary
+dj-database-url
+whitenoise
+cloudinary
+django-cloudinary-storage
