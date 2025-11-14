@@ -106,8 +106,12 @@ def services_list(request):
 	POST: create service document in Firestore (admin only)
 	"""
 	if request.method == "GET":
-		data = list_services()
-		return Response(data)
+		try:
+			data = list_services()
+			return Response(data)
+		except Exception as exc:
+			# Graceful degradation: log and return empty list + error hint instead of 500
+			return Response({"services": [], "error": f"Failed to load services: {exc.__class__.__name__}"}, status=drf_status.HTTP_200_OK)
 
 	# POST (require auth and basic validation)
 	if not request.user or not request.user.is_authenticated:
