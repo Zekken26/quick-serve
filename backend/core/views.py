@@ -43,6 +43,23 @@ def status(request):
 		"status": "ok",
 		"message": "Hello from Django backend",
 	})
+
+
+@api_view(["GET"])
+def whoami(request):
+	"""Return basic auth context and admin status to help debug deployments."""
+	user = getattr(request, "user", None)
+	uid = getattr(user, "firebase_uid", None) if user and user.is_authenticated else None
+	role = get_user_role(uid) if uid else None
+	return Response({
+		"authenticated": bool(user and user.is_authenticated),
+		"email": getattr(user, "email", None) if user else None,
+		"firebase_uid": uid,
+		"is_staff": bool(getattr(user, "is_staff", False)) if user else False,
+		"is_superuser": bool(getattr(user, "is_superuser", False)) if user else False,
+		"is_admin": _is_request_admin(request),
+		"role": (role or {}).get("role") if role else None,
+	})
  
 
 def _is_request_admin(request) -> bool:

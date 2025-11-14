@@ -28,6 +28,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # Simple API endpoint for frontend connectivity checks
     path('api/status/', core_views.status, name='api-status'),
+    path('api/whoami/', core_views.whoami, name='api-whoami'),
 
     # JWT auth endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
