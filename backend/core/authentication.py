@@ -2,12 +2,36 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework import exceptions
 from django.contrib.auth import get_user_model
 import firebase_admin
-from firebase_admin import credentials, auth
-from backend.settings import FIREBASE_CONFIG
+from firebase_admin import credentials
+from django.conf import settings
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(FIREBASE_CONFIG)
-    firebase_admin.initialize_app(cred)
+_firebase_app = None
+
+def get_firebase_app():
+    """Lazy initialize firebase-admin app.
+    Returns the app or None if config is missing/invalid so the server can still boot.
+    """
+    global _firebase_app
+    if _firebase_app:
+        return _firebase_app
+    cfg = getattr(settings, "FIREBASE_CONFIG", None)
+    if not cfg:
+        return None
+    pk = (cfg or {}).get("private_key", "") or ""
+    # Normalize accidental escaped newlines if not already handled
+    if "\\n" in pk and "\n" not in pk:
+        pk = pk.replace("\\n", "\n")
+        cfg["private_key"] = pk
+    if not pk.startswith("-----BEGIN PRIVATE KEY-----"):
+        # Don't crash entire Django app; just skip firebase init
+        return None
+    try:
+        cred = credentials.Certificate(cfg)
+        _firebase_app = firebase_admin.initialize_app(cred)
+    except Exception:
+        # Swallow and allow app to continue; authentication will fail gracefully
+        _firebase_app = None
+    return _firebase_app
 
 
 class FirebaseAuthentication(BaseAuthentication):
@@ -28,8 +52,13 @@ class FirebaseAuthentication(BaseAuthentication):
             return None
 
         id_token = parts[1]
+
+        # Ensure firebase app initialized (non-fatal if missing)
+        app = get_firebase_app()
+        if not app:
+            raise exceptions.AuthenticationFailed("Firebase configuration not set on server")
+
         try:
-            # Lazy-import firebase_admin.auth so missing package doesn't fail import time
             from firebase_admin import auth as fb_auth
             decoded = fb_auth.verify_id_token(id_token)
         except Exception as exc:

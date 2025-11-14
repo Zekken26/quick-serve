@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-import json
+import json, re
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,9 +54,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
-    'cloudinary',
-    'cloudinary_storage',
 ]
+
+# Optional Cloudinary apps (only if library installed)
+try:
+    import cloudinary  # type: ignore
+    import cloudinary_storage  # type: ignore
+    INSTALLED_APPS += ['cloudinary', 'cloudinary_storage']
+    CLOUDINARY_ENABLED = True
+except ImportError:
+    CLOUDINARY_ENABLED = False
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -141,7 +148,10 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Media files (uploaded images)
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+if CLOUDINARY_ENABLED:
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
@@ -172,18 +182,51 @@ CLOUDINARY_URL = os.environ.get("CLOUDINARY_URL")
 
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-import dj_database_url
+try:
+    import dj_database_url  # optional, only needed if DATABASE_URL provided
+except ImportError:
+    dj_database_url = None
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
-if DATABASE_URL:
+if DATABASE_URL and dj_database_url:
     DATABASES["default"] = dj_database_url.parse(DATABASE_URL)
 
-FIREBASE_CONFIG = {
-    "type": "service_account",
-    "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
-    "private_key_id": os.environ.get("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": os.environ.get("FIREBASE_PRIVATE_KEY").replace("\\n", "\n"),
-    "client_email": os.environ.get("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.environ.get("FIREBASE_CLIENT_ID"),
-    "token_uri": os.environ.get("FIREBASE_TOKEN_URI"),
-}
+def _load_service_account():
+    raw = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
+    if raw:
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            # Attempt to strip stray wrapping quotes
+            raw2 = raw.strip().strip("'").strip('"')
+            data = json.loads(raw2)
+        # Normalize private_key newlines
+        pk = data.get("private_key", "")
+        # Remove accidental literal '\r'
+        pk = pk.replace("\\r", "")
+        # Convert escaped '\n' to real newlines
+        pk = pk.replace("\\n", "\n")
+        # Strip leading/trailing spaces
+        pk = pk.strip()
+        data["private_key"] = pk
+        return data
+        # Fallback to individual vars (older method)
+    return {
+        "type": os.environ.get("FIREBASE_TYPE"),
+        "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
+        "private_key_id": os.environ.get("FIREBASE_PRIVATE_KEY_ID"),
+        "private_key": (os.environ.get("FIREBASE_PRIVATE_KEY") or "").replace("\\n", "\n").strip(),
+        "client_email": os.environ.get("FIREBASE_CLIENT_EMAIL"),
+        "client_id": os.environ.get("FIREBASE_CLIENT_ID"),
+        "auth_uri": os.environ.get("FIREBASE_AUTH_URI"),
+        "token_uri": os.environ.get("FIREBASE_TOKEN_URI"),
+        "auth_provider_x509_cert_url": os.environ.get("FIREBASE_AUTH_PROVIDER_CERT_URL"),
+        "client_x509_cert_url": os.environ.get("FIREBASE_CLIENT_CERT_URL"),
+    }
+
+FIREBASE_CONFIG = _load_service_account()
+
+# If private key is missing or malformed, disable firebase config gracefully so server boots.
+_pk = (FIREBASE_CONFIG or {}).get("private_key", "")
+if not _pk.startswith("-----BEGIN PRIVATE KEY-----"):
+    FIREBASE_CONFIG = {}
