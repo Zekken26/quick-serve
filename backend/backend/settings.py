@@ -178,7 +178,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
     DATABASES["default"] = dj_database_url.parse(DATABASE_URL)
 
-    FIREBASE_CONFIG = {
+FIREBASE_CONFIG = {
     "type": "service_account",
     "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
     "private_key_id": os.environ.get("FIREBASE_PRIVATE_KEY_ID"),
