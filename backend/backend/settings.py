@@ -205,6 +205,14 @@ if DATABASE_URL and dj_database_url:
     DATABASES["default"] = dj_database_url.parse(DATABASE_URL)
 
 def _load_service_account():
+    """Load Firebase service account credentials.
+
+    Priority order:
+    1) FIREBASE_SERVICE_ACCOUNT_JSON (full JSON string)
+    2) GOOGLE_APPLICATION_CREDENTIALS (path to JSON file)
+    3) Individual FIREBASE_* env vars (legacy)
+    """
+    # 1) Full JSON in env var
     raw = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
     if raw:
         try:
@@ -215,15 +223,27 @@ def _load_service_account():
             data = json.loads(raw2)
         # Normalize private_key newlines
         pk = data.get("private_key", "")
-        # Remove accidental literal '\r'
-        pk = pk.replace("\\r", "")
-        # Convert escaped '\n' to real newlines
-        pk = pk.replace("\\n", "\n")
-        # Strip leading/trailing spaces
+        pk = pk.replace("\\r", "")  # Remove accidental literal '\r'
+        pk = pk.replace("\\n", "\n")  # Convert escaped '\n' to real newlines
         pk = pk.strip()
         data["private_key"] = pk
         return data
-        # Fallback to individual vars (older method)
+
+    # 2) Path to JSON file via GOOGLE_APPLICATION_CREDENTIALS
+    gac_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if gac_path and os.path.exists(gac_path):
+        try:
+            with open(gac_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            pk = (data.get("private_key") or "")
+            pk = pk.replace("\\r", "")
+            pk = pk.replace("\\n", "\n").strip()
+            data["private_key"] = pk
+            return data
+        except Exception:
+            pass
+
+    # 3) Fallback to individual vars (older method)
     return {
         "type": os.environ.get("FIREBASE_TYPE"),
         "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
