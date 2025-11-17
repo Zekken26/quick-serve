@@ -41,3 +41,24 @@ export async function initAnalytics() {
   }
   return null;
 }
+
+// Debug helpers: expose auth and a token getter to window for quick checks
+declare global {
+  interface Window {
+    firebaseAuth?: ReturnType<typeof getAuth>;
+    getIdToken?: () => Promise<string | null>;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  try {
+    window.firebaseAuth = firebaseAuth;
+    window.getIdToken = async () => {
+      const u = firebaseAuth.currentUser;
+      if (!u) return null;
+      return await u.getIdToken(true);
+    };
+  } catch {
+    // no-op
+  }
+}

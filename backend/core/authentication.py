@@ -56,7 +56,8 @@ class FirebaseAuthentication(BaseAuthentication):
         # Ensure firebase app initialized (non-fatal if missing)
         app = get_firebase_app()
         if not app:
-            raise exceptions.AuthenticationFailed("Firebase configuration not set on server")
+            # Treat as no credentials presented so other auth backends can try
+            return None
 
         try:
             from firebase_admin import auth as fb_auth
@@ -81,5 +82,11 @@ class FirebaseAuthentication(BaseAuthentication):
 
         # Attach firebase uid to user instance (non-persistent attribute)
         setattr(user, "firebase_uid", uid)
+        # Also attach decoded claims so views can honor custom claims (e.g., admin)
+        try:
+            setattr(user, "firebase_claims", decoded)
+            setattr(user, "firebase_is_admin_claim", bool(decoded.get("admin") or decoded.get("role") == "admin" or (isinstance(decoded.get("roles"), (list, tuple)) and "admin" in decoded.get("roles", []))))
+        except Exception:
+            pass
 
         return (user, None)

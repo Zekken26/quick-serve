@@ -188,6 +188,9 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': False,
     'BLACKLIST_AFTER_ROTATION': True,
+    # Ensure SimpleJWT does NOT attempt to parse Firebase Bearer tokens
+    # Use Authorization: JWT <token> if you ever need SimpleJWT locally
+    'AUTH_HEADER_TYPES': ('JWT',),
 }
 
 

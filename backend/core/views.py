@@ -82,6 +82,20 @@ def _is_request_admin(request) -> bool:
 				bootstrap = []
 			if uid in bootstrap:
 				return True
+		# Firebase custom claims support (e.g., { admin: true } or role/roles)
+		try:
+			claims = getattr(request.user, "firebase_claims", None)
+			if claims:
+				if bool(claims.get("admin")):
+					return True
+				role_claim = claims.get("role")
+				if role_claim == "admin":
+					return True
+				roles_claim = claims.get("roles")
+				if isinstance(roles_claim, (list, tuple)) and "admin" in roles_claim:
+					return True
+		except Exception:
+			pass
 		# Firebase role check
 		role = get_user_role(uid) if uid else None
 		return bool(role and role.get("role") == "admin")
