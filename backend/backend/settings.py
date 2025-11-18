@@ -213,7 +213,8 @@ def _load_service_account():
     Priority order:
     1) FIREBASE_SERVICE_ACCOUNT_JSON (full JSON string)
     2) GOOGLE_APPLICATION_CREDENTIALS (path to JSON file)
-    3) Individual FIREBASE_* env vars (legacy)
+    3) Local fallback: core/firebase/quickserve-services-db-firebase-adminsdk-fbsvc-b09a6e5375.json
+    4) Individual FIREBASE_* env vars (legacy)
     """
     # 1) Full JSON in env var
     raw = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON")
@@ -221,13 +222,11 @@ def _load_service_account():
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            # Attempt to strip stray wrapping quotes
             raw2 = raw.strip().strip("'").strip('"')
             data = json.loads(raw2)
-        # Normalize private_key newlines
         pk = data.get("private_key", "")
-        pk = pk.replace("\\r", "")  # Remove accidental literal '\r'
-        pk = pk.replace("\\n", "\n")  # Convert escaped '\n' to real newlines
+        pk = pk.replace("\\r", "")
+        pk = pk.replace("\\n", "\n")
         pk = pk.strip()
         data["private_key"] = pk
         return data
@@ -246,7 +245,21 @@ def _load_service_account():
         except Exception:
             pass
 
-    # 3) Fallback to individual vars (older method)
+    # 3) Local fallback: use the attached file if present
+    local_path = os.path.join(BASE_DIR, "core", "firebase", "quickserve-services-db-firebase-adminsdk-fbsvc-b09a6e5375.json")
+    if os.path.exists(local_path):
+        try:
+            with open(local_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            pk = (data.get("private_key") or "")
+            pk = pk.replace("\\r", "")
+            pk = pk.replace("\\n", "\n").strip()
+            data["private_key"] = pk
+            return data
+        except Exception:
+            pass
+
+    # 4) Fallback to individual vars (older method)
     return {
         "type": os.environ.get("FIREBASE_TYPE"),
         "project_id": os.environ.get("FIREBASE_PROJECT_ID"),
