@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Briefcase, Calendar, DollarSign } from "lucide-react";
-import { firebaseDb } from "@/integrations/firebase/client";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { users, services, bookings } from "@/lib/data";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -14,25 +13,13 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
-    // Realtime counts via snapshot sizes
-    const unsubProfiles = onSnapshot(collection(firebaseDb, "user_profiles"), (snap) => {
-      setStats((prev) => ({ ...prev, totalUsers: snap.size }));
+    // Calculate stats from hardcoded data
+    setStats({
+      totalUsers: users.length,
+      totalServices: services.length,
+      totalBookings: bookings.length,
+      pendingBookings: bookings.filter(b => b.status === 'pending').length,
     });
-    const unsubServices = onSnapshot(collection(firebaseDb, "services"), (snap) => {
-      setStats((prev) => ({ ...prev, totalServices: snap.size }));
-    });
-    const unsubBookings = onSnapshot(collection(firebaseDb, "bookings"), (snap) => {
-      setStats((prev) => ({ ...prev, totalBookings: snap.size }));
-    });
-    const unsubPending = onSnapshot(query(collection(firebaseDb, "bookings"), where("status", "==", "pending")), (snap) => {
-      setStats((prev) => ({ ...prev, pendingBookings: snap.size }));
-    });
-    return () => {
-      unsubProfiles();
-      unsubServices();
-      unsubBookings();
-      unsubPending();
-    };
   }, []);
 
   const statCards = [

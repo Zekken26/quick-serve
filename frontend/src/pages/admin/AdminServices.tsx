@@ -11,10 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api";
 import { STATIC_CATEGORIES } from "@/lib/categories";
 import { formatPeso } from "@/lib/utils";
-import { firebaseDb, firebaseStorage } from "@/integrations/firebase/client";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
-import { collection, onSnapshot } from "firebase/firestore";
 
 interface Service {
   id: string;
@@ -45,11 +42,6 @@ const AdminServices = () => {
 
   useEffect(() => {
     loadServices();
-    // Realtime: listen to services changes and refresh
-    const unsub = onSnapshot(collection(firebaseDb, "services"), () => {
-      loadServices();
-    });
-    return () => unsub();
   }, []);
 
   const loadServices = async () => {
@@ -86,19 +78,10 @@ const AdminServices = () => {
     let imageUrl: string | null = editingService ? (formData.image_url || null) : null;
     try {
       if (imageFile) {
-        // Try backend local media upload first
-        try {
-          const fd = new FormData();
-          fd.append("file", imageFile);
-          const res = await api.upload<{ url: string }>("/api/uploads/service-image/", fd, true);
-          imageUrl = res.url;
-        } catch (backendErr) {
-          // Fallback to Firebase Storage
-          const path = `services/${Date.now()}-${imageFile.name}`;
-          const fileRef = storageRef(firebaseStorage, path);
-          await uploadBytes(fileRef, imageFile);
-          imageUrl = await getDownloadURL(fileRef);
-        }
+        const fd = new FormData();
+        fd.append("file", imageFile);
+        const res = await api.upload<{ url: string }>("/api/uploads/service-image/", fd, true);
+        imageUrl = res.url;
       }
     } catch (uploadErr: any) {
       toast({ title: "Image upload failed", description: uploadErr?.message || "", variant: "destructive" });

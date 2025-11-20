@@ -1,18 +1,17 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { firebaseAuth, firebaseDb } from "@/integrations/firebase/client";
-import { 
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  User as FirebaseUser,
-} from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { sampleUsers, User } from "@/lib/data";
+
+interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'user' | 'admin';
+}
 
 interface AuthContextType {
-  user: FirebaseUser | null;
+  user: AuthUser | null;
   loading: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<boolean>;
@@ -29,57 +28,45 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(firebaseAuth, async (u) => {
-      setUser(u);
-      if (u) {
-        await checkAdminStatus(u.uid);
-      } else {
-        setIsAdmin(false);
+    // Check localStorage for persisted user
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (err) {
+        localStorage.removeItem('currentUser');
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    }
+    setLoading(false);
   }, []);
 
-  const checkAdminStatus = async (userId: string) => {
-    try {
-      const ref = doc(firebaseDb, "user_roles", userId);
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        const is = data.role === "admin";
-        setIsAdmin(is);
-        return is;
-      }
-      setIsAdmin(false);
-      return false;
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.warn("checkAdminStatus error", err);
-      return false;
-    }
-  };
-
   const signIn = async (email: string, password: string) => {
-    try {
-      const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
-      let admin = false;
-      if (cred.user?.uid) {
-        admin = await checkAdminStatus(cred.user.uid);
-      }
-      toast({ title: "Welcome back!", description: "Signed in successfully." });
-      return admin;
-    } catch (err: any) {
-      toast({ title: "Error signing in", description: err.message, variant: "destructive" });
-      throw err;
+    // Find user in sample data
+    const foundUser = sampleUsers.find(u => u.email === email && u.password === password);
+    if (!foundUser) {
+      toast({ title: "Invalid credentials", description: "Please check your email and password", variant: "destructive" });
+      throw new Error("Invalid credentials");
     }
+
+    const authUser: AuthUser = {
+      id: foundUser.id,
+      email: foundUser.email,
+      name: foundUser.name,
+      role: foundUser.role
+    };
+
+    setUser(authUser);
+    localStorage.setItem('currentUser', JSON.stringify(authUser));
+
+    toast({ title: "Welcome back!", description: "Signed in successfully." });
+    return foundUser.role === 'admin';
   };
 
   const signUp = async (
@@ -88,46 +75,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     metadata: Record<string, any>,
     opts?: { silent?: boolean }
   ) => {
-    try {
-      const cred = await createUserWithEmailAndPassword(firebaseAuth, email, password);
-      // Try to store metadata, but don't fail signup if Firestore rules block it
-      if (Object.keys(metadata || {}).length) {
-        try {
-          await setDoc(doc(firebaseDb, "user_profiles", cred.user.uid), metadata, { merge: true });
-        } catch (metaErr) {
-          // eslint-disable-next-line no-console
-          console.warn("Profile save failed (non-fatal)", metaErr);
-        }
-      }
-      if (!opts?.silent) {
-        toast({ title: "Account created!", description: "Welcome aboard." });
-      }
-    } catch (err: any) {
-      toast({ title: "Error signing up", description: err.message, variant: "destructive" });
-      throw err;
+    // For demo, just simulate signup success
+    if (!opts?.silent) {
+      toast({ title: "Account created!", description: "Welcome aboard." });
     }
   };
 
   const signOut = async () => {
-    try {
-      await firebaseSignOut(firebaseAuth);
-      setIsAdmin(false);
-      navigate("/");
-      toast({ title: "Signed out", description: "You have been signed out successfully" });
-    } catch (err: any) {
-      toast({ title: "Error signing out", description: err.message, variant: "destructive" });
-      throw err;
-    }
+    setUser(null);
+    localStorage.removeItem('currentUser');
+    navigate("/");
+    toast({ title: "Signed out", description: "You have been signed out successfully" });
   };
 
   const getIdToken = async () => {
-    if (!user) return null;
-    try {
-      return await user.getIdToken();
-    } catch (err) {
-      return null;
-    }
+    // Return a dummy token for demo
+    return "demo-token";
   };
+
+  const isAdmin = user?.role === 'admin';
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, signIn, signUp, signOut, getIdToken }}>

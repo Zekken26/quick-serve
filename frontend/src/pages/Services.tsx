@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import ServiceCard from "@/components/ServiceCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -235,6 +236,8 @@ const Services = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };

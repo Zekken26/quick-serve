@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import ServiceCard from "@/components/ServiceCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -202,6 +203,93 @@ const Index = () => {
         </section>
       )}
 
+      {/* Aesthetic Ready to Get Started Section */}
+      <section className="py-20 bg-gradient-to-br from-background via-muted/20 to-accent/10">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Content Section */}
+          <div className="text-center mb-16">
+            <div className="mb-6 inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Ready to Transform Your Home?
+            </div>
+            <h2 className="mb-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+              Professional Services at Your
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"> Doorstep</span>
+            </h2>
+            <p className="mb-8 text-lg text-muted-foreground max-w-3xl mx-auto">
+              Experience the convenience of booking trusted professionals for all your home service needs.
+              From cleaning to repairs, we've got you covered with quality service and guaranteed satisfaction.
+            </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
+              <Button size="lg" className="text-lg px-8" onClick={() => navigate("/services")}>
+                Explore Services
+              </Button>
+              {!user && (
+                <Button size="lg" variant="outline" className="text-lg px-8" onClick={() => navigate("/register")}>
+                  Join Now
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Media Section - Video and Poster Separate */}
+          <div className="grid gap-8 lg:grid-cols-2 items-center max-w-6xl mx-auto">
+            {/* Promotional Video */}
+            <div className="relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-primary/5 to-accent/5 p-3">
+                <div className="relative rounded-2xl overflow-hidden bg-muted">
+                  <video
+                    className="w-full h-64 sm:h-80 object-cover"
+                    controls
+                    preload="metadata"
+                  >
+                    <source src="/assets/poster/promotional.mp4" type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+
+                {/* Decorative elements for video */}
+                <div className="absolute -top-6 -right-6 w-24 h-24 bg-primary/10 rounded-full blur-xl"></div>
+                <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-accent/10 rounded-full blur-xl"></div>
+              </div>
+            </div>
+
+            {/* Poster Image */}
+            <div className="relative">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-accent/5 to-primary/5 p-3">
+                <div className="relative rounded-2xl overflow-hidden bg-muted">
+                  <img
+                    src="/assets/poster/poster.jpg"
+                    alt="QuickServe Services Poster"
+                    className="w-full h-auto max-h-[500px] object-contain"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent"></div>
+                </div>
+
+                {/* Decorative elements for poster */}
+                <div className="absolute -top-6 -left-6 w-28 h-28 bg-accent/10 rounded-full blur-xl"></div>
+                <div className="absolute -bottom-6 -right-6 w-36 h-36 bg-primary/10 rounded-full blur-xl"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Floating stats */}
+          <div className="absolute left-8 top-1/2 transform -translate-y-1/2 hidden xl:block z-10">
+            <div className="bg-white rounded-lg shadow-lg p-4 border">
+              <div className="text-2xl font-bold text-primary">10,000+</div>
+              <div className="text-sm text-muted-foreground">Happy Customers</div>
+            </div>
+          </div>
+
+          <div className="absolute right-8 bottom-1/4 hidden xl:block z-10">
+            <div className="bg-white rounded-lg shadow-lg p-4 border">
+              <div className="text-2xl font-bold text-accent">4.9★</div>
+              <div className="text-sm text-muted-foreground">Average Rating</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Service Details Dialog */}
       <Dialog open={!!selectedService} onOpenChange={() => setSelectedService(null)}>
         <DialogContent className="sm:max-w-[500px]">
@@ -310,6 +398,8 @@ const Index = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   );
 };

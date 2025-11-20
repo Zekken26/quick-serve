@@ -6,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search } from "lucide-react";
 import { api } from "@/lib/api";
-import { firebaseDb } from "@/integrations/firebase/client";
-import { collection, onSnapshot } from "firebase/firestore";
 
 interface User {
   id: string;
@@ -25,13 +23,6 @@ const AdminUsers = () => {
 
   useEffect(() => {
     loadUsers();
-    // Realtime: listen to profiles and roles changes and refresh
-    const unsubProfiles = onSnapshot(collection(firebaseDb, "user_profiles"), () => loadUsers());
-    const unsubRoles = onSnapshot(collection(firebaseDb, "user_roles"), () => loadUsers());
-    return () => {
-      unsubProfiles();
-      unsubRoles();
-    };
   }, []);
 
   const loadUsers = async () => {

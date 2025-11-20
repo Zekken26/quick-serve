@@ -5,8 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
-import { firebaseAuth } from "@/integrations/firebase/client";
-import { signOut as fbSignOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
 const Register = () => {
@@ -50,8 +48,6 @@ const Register = () => {
         phone: formData.phone,
         address: formData.address,
       }, { silent: true });
-      // Firebase automatically signs in the newly created user. We want them to log in explicitly.
-      try { await fbSignOut(firebaseAuth); } catch {}
       toast({
         title: "Account Created Successfully",
         description: "You can now sign in to your account.",

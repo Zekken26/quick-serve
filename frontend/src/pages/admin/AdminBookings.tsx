@@ -9,8 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { firebaseDb } from "@/integrations/firebase/client";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { formatPeso, formatTime12h } from "@/lib/utils";
 
 interface Booking {
@@ -35,12 +33,6 @@ const AdminBookings = () => {
 
   useEffect(() => {
     loadBookings();
-    // Realtime: watch bookings changes and refresh via API (for enriched fields)
-    const q = query(collection(firebaseDb, "bookings"), orderBy("created_at", "desc"));
-    const unsub = onSnapshot(q, () => {
-      loadBookings();
-    });
-    return () => unsub();
   }, []);
 
   const loadBookings = async () => {
